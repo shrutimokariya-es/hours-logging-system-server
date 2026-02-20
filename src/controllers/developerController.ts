@@ -1,0 +1,145 @@
+import { Response } from 'express';
+import { User } from '../models';
+import { AuthRequest } from '../middlewares/auth';
+import { asyncHandler } from '../middlewares/errorHandler';
+import { sendResponse } from '../utils/response';
+import { envObj } from '../config/envConfig';
+
+export const createDeveloper = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { name, email, hourlyRate, role: developerRole, status } = req.body;
+  const userId = req.user._id;
+
+  const developerData = {
+    name,
+    email,
+    hourlyRate,
+    developerRole,
+    status,
+    role: 2, // Developer role
+    userId,
+    password:envObj.DEVPASS
+  };
+
+  const developer = await User.create(developerData);
+
+  return sendResponse(res, {
+    success: true,
+    message: 'Developer created successfully',
+    statusCode: 201,
+    data: { developer }
+  });
+});
+
+export const getDevelopers = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { page = 1, limit = 10, status, search } = req.query;
+  // const userId = req.user._id;
+
+  const query: any = { 
+    // userId,
+    role: 2 // Only fetch developers
+  };
+
+  if (status && status !== 'all') {
+    query.status = status;
+  }
+
+  if (search) {
+    query.name = { $regex: search, $options: 'i' };
+  }
+
+  const pageInt = parseInt(page as string);
+  const limitInt = parseInt(limit as string);
+
+  const developers = await User.find(query)
+    .sort({ createdAt: -1 })
+    .limit(limitInt * 1)
+    .skip((pageInt - 1) * limitInt)
+    .exec();
+
+  const total = await User.countDocuments(query);
+
+  return sendResponse(res, {
+    success: true,
+    message: 'Developers retrieved successfully',
+    data: {
+      developers,
+      pagination: {
+        page: pageInt,
+        limit: limitInt,
+        total,
+        pages: Math.ceil(total / limitInt)
+      }
+    }
+  });
+});
+
+export const getDeveloperById = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  // const userId = req.user._id;
+
+  const developer = await User.findOne({ _id: id, role: 2 });
+
+  if (!developer) {
+    return sendResponse(res, {
+      success: false,
+      message: 'Developer not found',
+      statusCode: 404
+    });
+  }
+
+  return sendResponse(res, {
+    success: true,
+    message: 'Developer retrieved successfully',
+    data: { developer }
+  });
+});
+
+export const updateDeveloper = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { name, email, hourlyRate, role: developerRole, status } = req.body;
+  // const userId = req.user._id;
+
+  const developer = await User.findOneAndUpdate(
+    { _id: id, role: 2 },
+    { name, email, hourlyRate, developerRole, status },
+    { new: true }
+  );
+
+  if (!developer) {
+    return sendResponse(res, {
+      success: false,
+      message: 'Developer not found',
+      statusCode: 404
+    });
+  }
+
+  return sendResponse(res, {
+    success: true,
+    message: 'Developer updated successfully',
+    data: { developer }
+  });
+});
+
+export const deleteDeveloper = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  // const userId = req.user._id;
+
+  const developer = await User.findOneAndUpdate(
+    { _id: id, role: 2 },
+    { status: 'Inactive' }, // Soft delete
+    { new: true }
+  );
+
+  if (!developer) {
+    return sendResponse(res, {
+      success: false,
+      message: 'Developer not found',
+      statusCode: 404
+    });
+  }
+
+  return sendResponse(res, {
+    success: true,
+    message: 'Developer deleted successfully'
+  });
+});
