@@ -15,6 +15,7 @@ import { developerRoutes } from './routes/developers';
 import { hourLogRoutes } from './routes/hourLogs';
 import { dashboardRoutes } from './routes/dashboard';
 import { reportRoutes } from './routes/reports';
+import { projectRoutes } from './routes/projects';
 import { envObj } from './config/envConfig';
 
 const app = express();
@@ -62,6 +63,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/developers', developerRoutes);
+app.use('/api/projects', projectRoutes);
 app.use('/api/hour-logs', hourLogRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);

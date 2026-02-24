@@ -6,6 +6,7 @@ import { sendResponse } from '../utils/response';
 export const getDashboardSummary = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
+    const userRole = req.user?.role;
     
     if (!userId) {
       return sendResponse(res, {
@@ -15,7 +16,7 @@ export const getDashboardSummary = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const dashboardData = await dashboardService.getDashboardSummary(userId);
+    const dashboardData = await dashboardService.getDashboardSummary(userId, userRole);
 
     return sendResponse(res, {
       success: true,

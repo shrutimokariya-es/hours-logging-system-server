@@ -15,7 +15,7 @@ import {
 const router = Router();
 
 router.use(authenticate);
-router.use(authorize([0])); // 0: BA
+router.use(authorize([0, 2])); // 0: BA, 2: Developer - both can create hour logs
 
 router.post('/', validate(createHourLogSchema), createHourLog);
 

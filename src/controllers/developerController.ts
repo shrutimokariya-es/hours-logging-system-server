@@ -6,21 +6,38 @@ import { sendResponse } from '../utils/response';
 import { envObj } from '../config/envConfig';
 
 export const createDeveloper = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { name, email, hourlyRate, role: developerRole, status } = req.body;
-  const userId = req.user._id;
+  const { name, email, hourlyRate, status, password } = req.body;
+  console.log("req.bodyb",req.body)
 
-  const developerData = {
+  // Only BA can create developers
+  if (req.user.role !== 0) {
+    return sendResponse(res, {
+      success: false,
+      message: 'Only BA can create developers',
+      statusCode: 403
+    });
+  }
+
+  // Check if email already exists
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    return sendResponse(res, {
+      success: false,
+      message: 'User with this email already exists',
+      statusCode: 400
+    });
+  }
+
+  const developer = await User.create({
     name,
     email,
     hourlyRate,
-    developerRole,
-    status,
+    developerRole:'developer',
+    status: status || 'Active',
     role: 2, // Developer role
-    userId,
-    password:envObj.DEVPASS
-  };
-
-  const developer = await User.create(developerData);
+    userId: req.user._id,
+    password: password || envObj.DEVPASS || 'dev123'
+  });
 
   return sendResponse(res, {
     success: true,
@@ -32,10 +49,17 @@ export const createDeveloper = asyncHandler(async (req: AuthRequest, res: Respon
 
 export const getDevelopers = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { page = 1, limit = 10, status, search } = req.query;
-  // const userId = req.user._id;
+
+  // Only BA can see all developers
+  if (req.user.role !== 0) {
+    return sendResponse(res, {
+      success: false,
+      message: 'Only BA can view developers',
+      statusCode: 403
+    });
+  }
 
   const query: any = { 
-    // userId,
     role: 2 // Only fetch developers
   };
 

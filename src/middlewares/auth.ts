@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { User } from '../models';
 import { envObj } from '../config/envConfig';
+import { sendResponse } from '../utils/response';
 
 export interface AuthRequest extends Request {
   user?: any;
@@ -12,9 +13,10 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Access denied. No token provided.' 
+      return sendResponse(res, {
+        success: false,
+        message: 'Access denied. No token provided.',
+        statusCode: 401
       });
     }
 
@@ -27,9 +29,10 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     const user = await User.findById(decoded.userId).select('-password');
     
     if (!user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid token. User not found.' 
+      return sendResponse(res, {
+        success: false,
+        message: 'Invalid token. User not found.',
+        statusCode: 401
       });
     }
 
@@ -37,23 +40,26 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     return next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid token.' 
+      return sendResponse(res, {
+        success: false,
+        message: 'Invalid token.',
+        statusCode: 401
       });
     }
     
     if (error instanceof jwt.TokenExpiredError) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Token expired.' 
+      return sendResponse(res, {
+        success: false,
+        message: 'Token expired.',
+        statusCode: 401
       });
     }
 
     console.error('Auth middleware error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Internal server error during authentication.' 
+    return sendResponse(res, {
+      success: false,
+      message: 'Internal server error during authentication.',
+      statusCode: 500
     });
   }
 };
@@ -61,16 +67,18 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 export const authorize = (roles: number[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Access denied. User not authenticated.' 
+      return sendResponse(res, {
+        success: false,
+        message: 'Access denied. User not authenticated.',
+        statusCode: 401
       });
     }
 
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Insufficient permissions.' 
+      return sendResponse(res, {
+        success: false,
+        message: 'Access denied. Insufficient permissions.',
+        statusCode: 403
       });
     }
 

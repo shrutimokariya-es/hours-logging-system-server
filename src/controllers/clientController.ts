@@ -6,19 +6,37 @@ import { sendResponse } from '../utils/response';
 import { envObj } from '../config/envConfig';
 
 export const createClient = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { name, companyEmail, billingType, status } = req.body;
-  const userId = req.user._id;
+  const { name, companyEmail, billingType, status, password } = req.body;
+console.log("req.user",req.body)
+  // Only BA can create clients
+  if (req.user.role !== 0) {
+    return sendResponse(res, {
+      success: false,
+      message: 'Only BA can create clients',
+      statusCode: 403
+    });
+  }
+
+  // Check if email already exists
+  const existingUser = await User.findOne({ email:companyEmail });
+  if (existingUser) {
+    return sendResponse(res, {
+      success: false,
+      message: 'User with this email already exists',
+      statusCode: 400
+    });
+  }
 
   const client = await User.create({
-    name,
-    email: companyEmail,
-    companyEmail,
-    billingType,
-    status,
+    name,    
+    email: companyEmail ,
+    billingType: billingType || 'Hourly',
+    status: status || 'Active',
     role: 1, // Client role
-    userId,
-    password: envObj.CLIPASS
+    userId: req.user._id,
+    password: password || envObj.CLIPASS || 'client123'
   });
+
   return sendResponse(res, {
     success: true,
     message: 'Client created successfully',
@@ -29,10 +47,17 @@ export const createClient = asyncHandler(async (req: AuthRequest, res: Response)
 
 export const getClients = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { page = 1, limit = 10, status, search } = req.query;
-  // const userId = req.user._id;
+
+  // Only BA can see all clients
+  if (req.user.role !== 0) {
+    return sendResponse(res, {
+      success: false,
+      message: 'Only BA can view clients',
+      statusCode: 403
+    });
+  }
 
   const query: any = { 
-    // userId,
     role: 1 // Only fetch clients
   };
 
@@ -54,7 +79,7 @@ export const getClients = asyncHandler(async (req: AuthRequest, res: Response) =
     .exec();
 
   const total = await User.countDocuments(query);
-console.log("clients",clients)
+
   return sendResponse(res, {
     success: true,
     message: 'Clients retrieved successfully',
@@ -73,7 +98,7 @@ console.log("clients",clients)
 export const getClientById = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   // const userId = req.user._id;
-
+console.log("id",id)
   const client = await User.findOne({ _id: id, role: 1 });
 
   if (!client) {

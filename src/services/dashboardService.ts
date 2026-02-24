@@ -23,34 +23,51 @@ interface DashboardSummary {
   }>;
 }
 
-const getTotalActiveClients = async (userId: string): Promise<number> => {
-  const data = await User.countDocuments({role:1,status:"Active"})
-  console.log("data", data)
+const getTotalActiveClients = async (userId: string, userRole: number): Promise<number> => {
+  if (userRole === 2) {
+    // For developers, count only clients they've worked with
+    const result = await HourLog.distinct('client', { developer: new Types.ObjectId(userId) });
+    return await User.countDocuments({ 
+      _id: { $in: result },
+      role: 1, 
+      status: 'Active' 
+    });
+  }
+  // For BA, count all active clients
   return await User.countDocuments({ 
-    // userId: new Types.ObjectId(userId),
-    role: 1, // Client role
+    role: 1, 
     status: 'Active' 
   });
 };
 
-const getTotalActiveDevelopers = async (userId: string): Promise<number> => {
+const getTotalActiveDevelopers = async (userId: string, userRole: number): Promise<number> => {
+  if (userRole === 2) {
+    // For developers, they only see themselves
+    return 1; // Themselves
+  }
+  // For BA, count all active developers
   return await User.countDocuments({ 
-    // userId: new Types.ObjectId(userId),
-    role: 2, // Developer role
+    role: 2, 
     status: 'Active' 
   });
 };
 
-const getTotalHoursForPeriod = async (startDate: Date, endDate: Date, userId: string): Promise<number> => {
+const getTotalHoursForPeriod = async (startDate: Date, endDate: Date, userId: string, userRole: number): Promise<number> => {
+  const matchQuery: any = {
+    date: {
+      $gte: startDate,
+      $lte: endDate
+    }
+  };
+  
+  if (userRole === 2) {
+    // For developers, only their own hours
+    matchQuery.developer = new Types.ObjectId(userId);
+  }
+  
   const result = await HourLog.aggregate([
     {
-      $match: {
-        // userId: new Types.ObjectId(userId),
-        date: {
-          $gte: startDate,
-          $lte: endDate
-        }
-      }
+      $match: matchQuery
     },
     {
       $group: {
@@ -63,13 +80,18 @@ const getTotalHoursForPeriod = async (startDate: Date, endDate: Date, userId: st
   return result[0]?.totalHours || 0;
 };
 
-const getTotalHoursOverall = async (userId: string): Promise<number> => {
+const getTotalHoursOverall = async (userId: string, userRole: number): Promise<number> => {
+  const matchQuery: any = {};
+  
+  if (userRole === 2) {
+    // For developers, only their own hours
+    matchQuery.developer = new Types.ObjectId(userId);
+  }
+  
   const result = await HourLog.aggregate([
-    // {
-    //   $match: {
-    //     // userId: new Types.ObjectId(userId)
-    //   }
-    // },
+    {
+      $match: matchQuery
+    },
     {
       $group: {
         _id: null,
@@ -81,17 +103,25 @@ const getTotalHoursOverall = async (userId: string): Promise<number> => {
   return result[0]?.totalHours || 0;
 };
 
-const getRecentHourLogs = async (userId: string): Promise<DashboardSummary['recentLogs']> => {
-  const logs = await HourLog.find()
+const getRecentHourLogs = async (userId: string, userRole: number): Promise<DashboardSummary['recentLogs']> => {
+  const matchQuery: any = {};
+  
+  if (userRole === 2) {
+    // For developers, only their own logs
+    matchQuery.developer = new Types.ObjectId(userId);
+  }
+  
+  const logs = await HourLog.find(matchQuery)
     .populate('client', 'name')
     .populate('developer', 'name')
+    .populate('project', 'name')
     .sort({ date: -1 })
     .limit(5)
     .lean();
-console.log("rolessss",logs)
+
   return logs.map((log: any) => ({
     id: log._id.toString(),
-    project: log.project || 'Unknown Project',
+    project: (log.project as any)?.name || 'Unknown Project',
     clientName: (log.client as any)?.name || 'Unknown Client',
     developerName: (log.developer as any)?.name || 'Unknown Developer',
     hours: log.hours,
@@ -103,21 +133,28 @@ console.log("rolessss",logs)
 const getTopClientsThisMonth = async (
   startDate: Date, 
   endDate: Date, 
-  userId: string
+  userId: string,
+  userRole: number
 ): Promise<DashboardSummary['topClientsThisMonth']> => {
+  const matchQuery: any = {
+    date: {
+      $gte: startDate,
+      $lte: endDate
+    }
+  };
+  
+  if (userRole === 2) {
+    // For developers, only their own logs
+    matchQuery.developer = new Types.ObjectId(userId);
+  }
+  
   const result = await HourLog.aggregate([
     {
-      $match: {
-        // userId: new Types.ObjectId(userId),
-        date: {
-          $gte: startDate,
-          $lte: endDate
-        }
-      }
+      $match: matchQuery
     },
     {
       $group: {
-        _id: '$clientId',
+        _id: '$client',
         totalHours: { $sum: '$hours' },
         logCount: { $sum: 1 }
       }
@@ -155,11 +192,11 @@ const getTopClientsThisMonth = async (
   }));
 };
 
-const getDashboardSummary = async (userId: string): Promise<DashboardSummary> => {
+const getDashboardSummary = async (userId: string, userRole: number): Promise<DashboardSummary> => {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-console.log("userID",userId)
+
   // Use Promise.all for parallel execution
   const [
     totalClients,
@@ -169,19 +206,14 @@ console.log("userID",userId)
     recentLogs,
     topClientsThisMonth
   ] = await Promise.all([
-    getTotalActiveClients(userId),
-    getTotalActiveDevelopers(userId),
-    getTotalHoursForPeriod(startOfMonth, endOfMonth, userId),
-    getTotalHoursOverall(userId),
-    getRecentHourLogs(userId),
-    getTopClientsThisMonth(startOfMonth, endOfMonth, userId)
+    getTotalActiveClients(userId, userRole),
+    getTotalActiveDevelopers(userId, userRole),
+    getTotalHoursForPeriod(startOfMonth, endOfMonth, userId, userRole),
+    getTotalHoursOverall(userId, userRole),
+    getRecentHourLogs(userId, userRole),
+    getTopClientsThisMonth(startOfMonth, endOfMonth, userId, userRole)
   ]);
-  console.log("totalClients", totalClients);
-  console.log("totalDevelopers", totalDevelopers);
-  console.log("totalHoursThisMonth", totalHoursThisMonth);
-  console.log("totalHoursOverall", totalHoursOverall);
-  console.log("recentLogs", recentLogs);
-  console.log("topClientsThisMonth", topClientsThisMonth);
+  
   return {
     totalClients,
     totalDevelopers,

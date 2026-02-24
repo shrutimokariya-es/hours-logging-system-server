@@ -15,13 +15,11 @@ export const createDeveloperSchema = Joi.object({
     'number.max': 'Hourly rate cannot exceed 9999',
     'any.required': 'Hourly rate is required'
   }),
-  role: Joi.string().trim().min(2).max(50).required().messages({
-    'string.min': 'Role must be at least 2 characters long',
-    'string.max': 'Role cannot exceed 50 characters',
-    'any.required': 'Role is required'
-  }),
   status: Joi.string().valid('Active', 'Inactive').optional().messages({
     'any.only': 'Status must be Active or Inactive'
+  }),
+  password: Joi.string().min(6).optional().messages({
+    'string.min': 'Password must be at least 6 characters long'
   })
 });
 

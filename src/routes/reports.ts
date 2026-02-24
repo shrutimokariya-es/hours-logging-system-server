@@ -7,6 +7,7 @@ import {
   deleteReport,
   getReportStats,
   getClientHours,
+  getClientHoursData,
   getDeveloperHours,
   getHoursSummary
 } from '../controllers/reportController';
@@ -31,7 +32,7 @@ router.delete('/:id', deleteReport);
 router.get('/stats/summary', getReportStats);
 
 // Get client hours data
-router.get('/clients/hours', getClientHours);
+router.get('/clients/hours', getClientHoursData);
 
 // Get developer hours data
 router.get('/developers/hours', getDeveloperHours);

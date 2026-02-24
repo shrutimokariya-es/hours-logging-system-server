@@ -1,5 +1,6 @@
 import { envObj } from '../config/envConfig';
 import { Request, Response, NextFunction } from 'express';
+import { sendResponse } from '../utils/response';
 
 export interface AppError extends Error {
   statusCode?: number;
@@ -33,20 +34,24 @@ export const errorHandler = (
 
   if (envObj.NODE_ENV === 'development') {
     console.error('Error:', error);
-    res.status(statusCode).json({
+    return sendResponse(res, {
       success: false,
-      error: {
+      message,
+      statusCode,
+      error: JSON.stringify({
         message,
         stack: error.stack,
         details: error
-      }
+      })
     });
   } else {
-    res.status(statusCode).json({
+    return sendResponse(res, {
       success: false,
-      error: {
+      message,
+      statusCode,
+      error: JSON.stringify({
         message
-      }
+      })
     });
   }
 };

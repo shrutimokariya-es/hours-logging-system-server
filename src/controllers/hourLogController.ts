@@ -1,39 +1,87 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
-import { HourLog, User } from '../models';
+import { HourLog, User, Project } from '../models';
 import { AuthRequest } from '../middlewares/auth';
 import { asyncHandler } from '../middlewares/errorHandler';
 import { sendResponse } from '../utils/response';
 
 export const createHourLog = asyncHandler(async (req: AuthRequest, res: Response) => {
-  console.log(req.body);
-  const { client, developer, date, hours, description } = req.body;
-
-  const clientUser = await User.findOne({ _id: client, role: 1 }); // Client role
-  const developerUser = await User.findOne({ _id: developer, role: 2 }); // Developer role
-
-  if (!clientUser || !developerUser) {
+  const { client, developer, project, date, hours, description } = req.body;
+console.log("user",req.body)
+  // Only developers can create hour logs for themselves
+  if (req.user.role === 2) {
+    // Developer can only log hours for themselves
+    if (developer !== req.user._id.toString()) {
+      return sendResponse(res, {
+        success: false,
+        message: 'Developers can only log hours for themselves',
+        statusCode: 403
+      });
+    }
+  } else if (req.user.role !== 0) {
+    // Only BA and developers can create hour logs
     return sendResponse(res, {
       success: false,
-      message: 'Invalid client or developer ID',
+      message: 'Only BA and developers can create hour logs',
+      statusCode: 403
+    });
+  }
+
+  // Validate client
+  const clientUser = await User.findOne({ _id: client, role: 1 });
+  if (!clientUser) {
+    return sendResponse(res, {
+      success: false,
+      message: 'Invalid client ID',
       statusCode: 400
     });
   }
-console.log("client", client);
-console.log("developer", developer);
-console.log("date", date);
-console.log("hours", hours);
-console.log("description", description);
+
+  // Validate developer
+  const developerUser = await User.findOne({ _id: developer, role: 2 });
+  if (!developerUser) {
+    return sendResponse(res, {
+      success: false,
+      message: 'Invalid developer ID',
+      statusCode: 400
+    });
+  }
+
+  // Validate project
+  const projectDoc = await Project.findById(project);
+  if (!projectDoc) {
+    return sendResponse(res, {
+      success: false,
+      message: 'Invalid project ID',
+      statusCode: 400
+    });
+  }
+
+  // Check if developer is assigned to the project
+  if (!projectDoc.developers.includes(developer as any)) {
+    return sendResponse(res, {
+      success: false,
+      message: 'Developer is not assigned to this project',
+      statusCode: 400
+    });
+  }
+
   const hourLog = await HourLog.create({
     client,
     developer,
+    project,
     date,
     hours,
     description,
     createdBy: req.user._id
   });
 
-  await hourLog.populate(['client', 'developer', 'createdBy']);
+  // Update project total hours
+  await Project.findByIdAndUpdate(project, {
+    $inc: { totalHours: hours }
+  });
+
+  await hourLog.populate(['client', 'developer', 'project', 'createdBy']);
 
   return sendResponse(res, {
     success: true,
@@ -44,12 +92,22 @@ console.log("description", description);
 });
 
 export const getHourLogs = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { page = 1, limit = 10, clientId, developerId, startDate, endDate } = req.query;
+  const { page = 1, limit = 10, clientId, developerId, projectId, startDate, endDate } = req.query;
   
   const query: any = {};
   
+  // Apply role-based filtering
+  if (req.user.role === 1) { // Client can only see their own hour logs
+    query.client = req.user._id;
+  } else if (req.user.role === 2) { // Developer can only see their own hour logs
+    query.developer = req.user._id;
+  }
+  // BA can see all hour logs
+  
+  // Apply additional filters
   if (clientId) query.client = clientId;
   if (developerId) query.developer = developerId;
+  if (projectId) query.project = projectId;
   
   if (startDate || endDate) {
     query.date = {};
@@ -58,7 +116,7 @@ export const getHourLogs = asyncHandler(async (req: AuthRequest, res: Response) 
   }
 
   const hourLogs = await HourLog.find(query)
-    .populate(['client', 'developer', 'createdBy'])
+    .populate(['client', 'developer', 'project', 'createdBy'])
     .sort({ date: -1 })
     .limit(Number(limit) * Number(page))
     .skip((Number(page) - 1) * Number(limit));

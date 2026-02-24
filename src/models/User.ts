@@ -8,7 +8,6 @@ export interface IUser extends Document {
   role: number; // 0: BA, 1: Client, 2: Developer
   
   // Client/Developer specific fields
-  companyEmail?: string; // For clients
   billingType?: 'Hourly' | 'Fixed'; // For clients
   hourlyRate?: number; // For developers
   developerRole?: string; // For developers (different from user role)
@@ -42,14 +41,6 @@ const userSchema = new Schema<IUser>({
     type: Number,
     enum: [0, 1, 2], // 0: BA, 1: Client, 2: Developer
     default: 0
-  },
-  companyEmail: {
-    type: String,
-    required: function() {
-      return this.role === 1; // Only required for clients
-    },
-    trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
   },
   billingType: {
     type: String,

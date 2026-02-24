@@ -1,5 +1,5 @@
 import { HourLog, IHourLog } from '../models/HourLog';
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 
 // In-memory storage for reports
 let memoryReports: any[] = [];
@@ -134,6 +134,86 @@ export const generateReport = async (data: any) => {
     return report;
   } catch (error) {
     throw new Error(`Failed to create report: ${error}`);
+  }
+};
+
+// Get client hours with project breakdown
+export const getClientProjectHours = async (
+  clientId: string,
+  startDate?: string,
+  endDate?: string
+) => {
+  try {
+    const dateFilter: any = {};
+    
+    if (startDate || endDate) {
+      dateFilter.date = {};
+      if (startDate) {
+        dateFilter.date.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        dateFilter.date.$lte = new Date(endDate);
+      }
+    }
+
+    const projectHours = await HourLog.aggregate([
+      {
+        $match: {
+          client: new mongoose.Types.ObjectId(clientId),
+          ...dateFilter
+        }
+      },
+      {
+        $lookup: {
+          from: 'projects',
+          localField: 'project',
+          foreignField: '_id',
+          as: 'projectInfo'
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'developer',
+          foreignField: '_id',
+          as: 'developerInfo'
+        }
+      },
+      {
+        $group: {
+          _id: '$project',
+          totalHours: { $sum: '$hours' },
+          developers: {
+            $push: {
+              _id: '$developerInfo._id',
+              name: '$developerInfo.name',
+              hours: { $sum: '$hours' }
+            }
+          },
+          dateRange: {
+            $min: '$date',
+            $max: '$date'
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          name: '$projectInfo.name',
+          totalHours: 1,
+          developers: 1,
+          dateRange: 1
+        }
+      },
+      {
+        $sort: { name: 1 }
+      }
+    ]);
+
+    return projectHours;
+  } catch (error) {
+    console.error('Error fetching client hours with projects:', error);
+    throw error;
   }
 };
 
@@ -289,9 +369,10 @@ export const getClientHours = async (period: string = 'monthly', clientId?: stri
     
     const hourLogs = await HourLog.find(query)
       .populate('client', 'name email role')
-      .populate('developer', 'name email role')
+      .populate('developer')
+      .populate('project', 'name')
       .lean();
-
+console.log("hourLogs", hourLogs);
     const clientData = new Map();
     
     hourLogs.forEach((log: any) => {
@@ -316,7 +397,8 @@ export const getClientHours = async (period: string = 'monthly', clientId?: stri
       
       const data = clientData.get(client._id);
       data.totalHours += log.hours;
-      data.developers.add(log.developer.name);
+      // data.developers.add(log.developer.name);
+      data.developers.add(log);
       data.logs.push(log);
       
       if (period === 'weekly') {
@@ -338,7 +420,7 @@ export const getClientHours = async (period: string = 'monthly', clientId?: stri
 };
 
 // Get developer hours data
-export const getDeveloperHours = async (period: string = 'monthly', developerId?: string) => {
+export const getDeveloperHours = async (period: string = 'monthly', developerId?: string, userRole?: number, userId?: string) => {
   try {
     const now = new Date();
     let dateFilter: any = {};
@@ -403,7 +485,12 @@ export const getDeveloperHours = async (period: string = 'monthly', developerId?
       date: dateFilter
     };
     
-    if (developerId) {
+    // Role-based filtering
+    if (userRole === 2 && userId) {
+      // Developers can only see their own hours
+      query.developer = new Types.ObjectId(userId);
+    } else if (developerId) {
+      // BA can filter by specific developer
       query.developer = new Types.ObjectId(developerId);
     }
     
@@ -458,7 +545,7 @@ export const getDeveloperHours = async (period: string = 'monthly', developerId?
 };
 
 // Get combined hours summary
-export const getHoursSummary = async (period: string = 'monthly', startDate?: string, endDate?: string) => {
+export const getHoursSummary = async (period: string = 'monthly', startDate?: string, endDate?: string, userRole?: number, userId?: string) => {
   try {
     const now = new Date();
     let dateFilter: any = {};
@@ -528,9 +615,17 @@ export const getHoursSummary = async (period: string = 'monthly', startDate?: st
       }
     }
     
-    const hourLogs = await HourLog.find({
+    const query: any = {
       date: dateFilter
-    })
+    };
+    
+    // Role-based filtering
+    if (userRole === 2 && userId) {
+      // Developers can only see their own hours
+      query.developer = new Types.ObjectId(userId);
+    }
+    
+    const hourLogs = await HourLog.find(query)
       .populate('client', 'name email role')
       .populate('developer', 'name email role')
       .populate('createdBy', 'name email')
@@ -616,5 +711,6 @@ export const reportService = {
   getReportStats,
   getClientHours,
   getDeveloperHours,
-  getHoursSummary
+  getHoursSummary,
+  getClientProjectHours
 };

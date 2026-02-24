@@ -28,6 +28,10 @@ export const createHourLogSchema = Joi.object({
     'string.min': 'Description is required',
     'string.max': 'Description cannot exceed 500 characters',
     'any.required': 'Description is required'
+  }),
+  project: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required().messages({
+    'string.pattern.base': 'Valid project ID is required',
+    'any.required': 'Project is required'
   })
 });
 

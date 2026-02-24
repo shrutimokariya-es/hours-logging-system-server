@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { reportService } from '../services/reportService';
 
 // Generate new report
@@ -34,6 +35,38 @@ export const generateReport = async (req: Request, res: Response): Promise<Respo
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to generate report'
+    });
+  }
+};
+
+// Get client hours with project breakdown
+export const getClientHours = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { clientId, startDate, endDate } = req.query;
+
+    if (!clientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Client ID is required'
+      });
+    }
+
+    const result = await reportService.getClientProjectHours(
+      clientId as string,
+      startDate as string,
+      endDate as string
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Client hours retrieved successfully',
+      data: result
+    });
+  } catch (error: any) {
+    console.error('Error fetching client hours:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch client hours'
     });
   }
 };
@@ -130,7 +163,7 @@ export const getReportStats = async (req: Request, res: Response) => {
 };
 
 // Get client hours data
-export const getClientHours = async (req: Request, res: Response) => {
+export const getClientHoursData = async (req: Request, res: Response) => {
   try {
     const period = req.query.period as string || 'monthly';
     const clientId = req.query.clientId as string;
@@ -156,8 +189,10 @@ export const getDeveloperHours = async (req: Request, res: Response) => {
   try {
     const period = req.query.period as string || 'monthly';
     const developerId = req.query.developerId as string;
+    const userRole = (req as any).user?.role;
+    const userId = (req as any).user?.id;
     
-    const developerHours = await reportService.getDeveloperHours(period, developerId);
+    const developerHours = await reportService.getDeveloperHours(period, developerId, userRole, userId);
 
     res.json({
       success: true,
@@ -179,8 +214,10 @@ export const getHoursSummary = async (req: Request, res: Response) => {
     const period = req.query.period as string || 'monthly';
     const startDate = req.query.startDate as string;
     const endDate = req.query.endDate as string;
+    const userRole = (req as any).user?.role;
+    const userId = (req as any).user?.id;
     
-    const summary = await reportService.getHoursSummary(period, startDate, endDate);
+    const summary = await reportService.getHoursSummary(period, startDate, endDate, userRole, userId);
 
     res.json({
       success: true,

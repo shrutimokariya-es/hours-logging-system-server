@@ -3,7 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IHourLog extends Document {
   client: mongoose.Types.ObjectId;
   developer: mongoose.Types.ObjectId;
-  // project: string;
+  project: mongoose.Types.ObjectId;
   date: Date;
   hours: number;
   description: string;
@@ -21,12 +21,11 @@ const hourLogSchema = new Schema<IHourLog>({
     ref: 'User',
     required: [true, 'Developer is required']
   },
-  // project: {
-  //   type: String,
-  //   required: [true, 'Project is required'],
-  //   trim: true,
-  //   maxlength: [100, 'Project name cannot exceed 100 characters']
-  // },
+  project: {
+    type: Schema.Types.ObjectId,
+    ref: 'Project',
+    required: [true, 'Project is required']
+  },
   date: {
     type: Date,
     required: [true, 'Date is required'],
