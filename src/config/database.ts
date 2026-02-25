@@ -4,8 +4,21 @@ import { envObj } from './envConfig';
 
 const connectDB = async (): Promise<void> => {
   try {
+
+    const isProd = "Production";
+ 
+  const options = isProd
+    ? {
+        tls: true,
+        tlsAllowInvalidCertificates: false,
+        serverSelectionTimeoutMS: 10000,
+        retryWrites: true,
+        maxPoolSize: 5,
+      }
+    : {};
+
     const mongoURI = envObj.MONGODB_URI || 'mongodb://127.0.0.1:27017/hours-logging-system';
-    const conn = await mongoose.connect(mongoURI);
+    const conn = await mongoose.connect(mongoURI,options);
 
     logger.info(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
@@ -29,3 +42,6 @@ process.on('SIGINT', async () => {
 });
 
 export { connectDB };
+
+ 
+ 
