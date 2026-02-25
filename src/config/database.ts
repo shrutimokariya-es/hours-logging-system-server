@@ -5,7 +5,6 @@ import { envObj } from './envConfig';
 const connectDB = async (): Promise<void> => {
   try {
     const mongoURI = envObj.MONGODB_URI || 'mongodb://127.0.0.1:27017/hours-logging-system';
-    console.log("???????????????/",mongoURI)
     const conn = await mongoose.connect(mongoURI);
 
     logger.info(`MongoDB Connected: ${conn.connection.host}`);

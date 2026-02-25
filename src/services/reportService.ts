@@ -366,10 +366,25 @@ export const getClientHours = async (period: string = 'monthly', clientId?: stri
     let projectList: any = [];
     if (clientId) {
       query.client = new Types.ObjectId(clientId);
-      const pros = await Project.find({client: new Types.ObjectId(clientId)}, { name: 1, developers: 1})
+      const pros = await Project.find({client: new Types.ObjectId(clientId)}, { name: 1, developers: 1, estimatedHours: 1})
         .populate('developers', 'name email')
         .lean();
-      projectList.push(...pros)
+      
+      // Fetch actual hours for each project
+      const projectsWithHours = await Promise.all(
+        pros.map(async (project) => {
+          const hourLogs = await HourLog.find({ project: project._id });
+          const actualHours = hourLogs.reduce((total, log) => total + log.hours, 0);
+          
+          return {
+            ...project,
+            actualHours,
+            hourLogsCount: hourLogs.length
+          };
+        })
+      );
+      
+      projectList.push(...projectsWithHours)
     }
     
     const hourLogs = await HourLog.find(query)

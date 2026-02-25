@@ -103,7 +103,12 @@ const getTotalHoursOverall = async (userId: string, userRole: number): Promise<n
   return result[0]?.totalHours || 0;
 };
 
-const getRecentHourLogs = async (userId: string, userRole: number): Promise<DashboardSummary['recentLogs']> => {
+const getRecentHourLogs = async (
+  userId: string, 
+  userRole: number,
+  startDate?: Date,
+  endDate?: Date
+): Promise<DashboardSummary['recentLogs']> => {
   const matchQuery: any = {};
   
   if (userRole === 2) {
@@ -111,12 +116,20 @@ const getRecentHourLogs = async (userId: string, userRole: number): Promise<Dash
     matchQuery.developer = new Types.ObjectId(userId);
   }
   
+  // Add date filter if provided
+  if (startDate && endDate) {
+    matchQuery.date = {
+      $gte: startDate,
+      $lte: endDate
+    };
+  }
+  
   const logs = await HourLog.find(matchQuery)
     .populate('client', 'name')
     .populate('developer', 'name')
     .populate('project', 'name')
     .sort({ date: -1 })
-    .limit(5)
+    .limit(50) // Increased limit for reports
     .lean();
 
   return logs.map((log: any) => ({
@@ -192,10 +205,17 @@ const getTopClientsThisMonth = async (
   }));
 };
 
-const getDashboardSummary = async (userId: string, userRole: number): Promise<DashboardSummary> => {
+const getDashboardSummary = async (
+  userId: string, 
+  userRole: number,
+  startDateStr?: string,
+  endDateStr?: string
+): Promise<DashboardSummary> => {
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  
+  // Use provided dates or default to current month
+  const startOfMonth = startDateStr ? new Date(startDateStr) : new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = endDateStr ? new Date(endDateStr) : new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
   // Use Promise.all for parallel execution
   const [
@@ -210,7 +230,7 @@ const getDashboardSummary = async (userId: string, userRole: number): Promise<Da
     getTotalActiveDevelopers(userId, userRole),
     getTotalHoursForPeriod(startOfMonth, endOfMonth, userId, userRole),
     getTotalHoursOverall(userId, userRole),
-    getRecentHourLogs(userId, userRole),
+    getRecentHourLogs(userId, userRole, startOfMonth, endOfMonth),
     getTopClientsThisMonth(startOfMonth, endOfMonth, userId, userRole)
   ]);
   

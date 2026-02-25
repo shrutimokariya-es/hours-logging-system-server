@@ -15,7 +15,8 @@ console.log("user",req.body)
       return sendResponse(res, {
         success: false,
         message: 'Developers can only log hours for themselves',
-        statusCode: 403
+        statusCode: 403,
+        toast: true
       });
     }
   } else if (req.user.role !== 0) {
@@ -23,7 +24,8 @@ console.log("user",req.body)
     return sendResponse(res, {
       success: false,
       message: 'Only BA and developers can create hour logs',
-      statusCode: 403
+      statusCode: 403,
+      toast: true
     });
   }
 
@@ -33,7 +35,8 @@ console.log("user",req.body)
     return sendResponse(res, {
       success: false,
       message: 'Invalid client ID',
-      statusCode: 400
+      statusCode: 400,
+      toast: true
     });
   }
 
@@ -43,7 +46,8 @@ console.log("user",req.body)
     return sendResponse(res, {
       success: false,
       message: 'Invalid developer ID',
-      statusCode: 400
+      statusCode: 400,
+      toast: true
     });
   }
 
@@ -53,7 +57,8 @@ console.log("user",req.body)
     return sendResponse(res, {
       success: false,
       message: 'Invalid project ID',
-      statusCode: 400
+      statusCode: 400,
+      toast: true
     });
   }
 
@@ -62,7 +67,8 @@ console.log("user",req.body)
     return sendResponse(res, {
       success: false,
       message: 'Developer is not assigned to this project',
-      statusCode: 400
+      statusCode: 400,
+      toast: true
     });
   }
 
@@ -87,7 +93,8 @@ console.log("user",req.body)
     success: true,
     message: 'Hour log created successfully',
     statusCode: 201,
-    data: { hourLog }
+    data: { hourLog },
+    toast: true
   });
 });
 

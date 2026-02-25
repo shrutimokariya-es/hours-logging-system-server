@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { Project, User } from '../models';
+import { Project, User, HourLog } from '../models';
 import { AuthRequest } from '../middlewares/auth';
 import { asyncHandler } from '../middlewares/errorHandler';
 import { sendResponse } from '../utils/response';
@@ -58,7 +58,7 @@ export const createProject = asyncHandler(async (req: AuthRequest, res: Response
 export const getProjects = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { page = 1, limit = 10, status, client } = req.query;
   const userRole = req.user.role;
-console.log("userRole",userRole)
+
   let query: any = {};
 
   // BA can see all projects
@@ -77,7 +77,7 @@ console.log("userRole",userRole)
   if (client) {
     query.client = client;
   }
-console.log("query",query)
+
   const projects = await Project.find(query)
     .populate('client', 'name email')
     .populate('developers', 'name email')
@@ -86,12 +86,26 @@ console.log("query",query)
     .limit(Number(limit) * Number(page))
     .skip((Number(page) - 1) * Number(limit));
 
+  // Fetch actual logged hours for each project
+  const projectsWithHours = await Promise.all(
+    projects.map(async (project) => {
+      const hourLogs = await HourLog.find({ project: project._id });
+      const actualHours = hourLogs.reduce((total, log) => total + log.hours, 0);
+      
+      return {
+        ...project.toObject(),
+        actualHours,
+        hourLogsCount: hourLogs.length
+      };
+    })
+  );
+ 
   const total = await Project.countDocuments(query);
 
   return sendResponse(res, {
     success: true,
     data: {
-      projects,
+      projects: projectsWithHours,
       pagination: {
         page: Number(page),
         limit: Number(limit),

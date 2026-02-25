@@ -7,6 +7,7 @@ export const getDashboardSummary = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     const userRole = req.user?.role;
+    const { startDate, endDate } = req.query;
     
     if (!userId) {
       return sendResponse(res, {
@@ -16,7 +17,12 @@ export const getDashboardSummary = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const dashboardData = await dashboardService.getDashboardSummary(userId, userRole);
+    const dashboardData = await dashboardService.getDashboardSummary(
+      userId, 
+      userRole,
+      startDate as string,
+      endDate as string
+    );
 
     return sendResponse(res, {
       success: true,
