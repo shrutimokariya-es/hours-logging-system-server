@@ -92,7 +92,8 @@ console.log("user",req.body)
 });
 
 export const getHourLogs = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { page = 1, limit = 10, clientId, developerId, projectId, startDate, endDate } = req.query;
+  const { page = 1, limit = 10, clientId, developerId, startDate, endDate } = req.query;
+  const { projectId } = req.params;
   
   const query: any = {};
   

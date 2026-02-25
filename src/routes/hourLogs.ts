@@ -21,6 +21,8 @@ router.post('/', validate(createHourLogSchema), createHourLog);
 
 router.get('/', validate(getHourLogsSchema, 'query'), getHourLogs);
 
+router.get('/project/:projectId', validate(getHourLogsSchema, 'query'), getHourLogs);
+
 router.get('/reports', validate(getReportsSchema, 'query'), getReports);
 
 export { router as hourLogRoutes };

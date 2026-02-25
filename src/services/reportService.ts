@@ -1,3 +1,4 @@
+import { Project } from '../models/Project';
 import { HourLog, IHourLog } from '../models/HourLog';
 import mongoose, { Types } from 'mongoose';
 
@@ -362,9 +363,13 @@ export const getClientHours = async (period: string = 'monthly', clientId?: stri
     const query: any = {
       date: dateFilter
     };
-    
+    let projectList: any = [];
     if (clientId) {
       query.client = new Types.ObjectId(clientId);
+      const pros = await Project.find({client: new Types.ObjectId(clientId)}, { name: 1, developers: 1})
+        .populate('developers', 'name email')
+        .lean();
+      projectList.push(...pros)
     }
     
     const hourLogs = await HourLog.find(query)
@@ -372,7 +377,6 @@ export const getClientHours = async (period: string = 'monthly', clientId?: stri
       .populate('developer')
       .populate('project', 'name')
       .lean();
-console.log("hourLogs", hourLogs);
     const clientData = new Map();
     
     hourLogs.forEach((log: any) => {
@@ -397,9 +401,9 @@ console.log("hourLogs", hourLogs);
       
       const data = clientData.get(client._id);
       data.totalHours += log.hours;
-      // data.developers.add(log.developer.name);
       data.developers.add(log);
       data.logs.push(log);
+      
       
       if (period === 'weekly') {
         data.weeklyHours[weekKey] = (data.weeklyHours[weekKey] || 0) + log.hours;
@@ -412,7 +416,8 @@ console.log("hourLogs", hourLogs);
       ...client,
       developers: Array.from(client.developers),
       weeklyHours: client.weeklyHours,
-      monthlyHours: client.monthlyHours
+      monthlyHours: client.monthlyHours,
+      totalProjects: projectList
     }));
   } catch (error) {
     throw new Error(`Failed to get client hours: ${error}`);

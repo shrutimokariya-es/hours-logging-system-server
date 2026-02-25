@@ -29,18 +29,18 @@ app.use(cors({
   credentials: true
 }));
 
-const limiter = rateLimit({
-  windowMs: parseInt(envObj.RATE_LIMIT_WINDOW_MS || '900000'),
-  max: parseInt(envObj.RATE_LIMIT_MAX_REQUESTS || '100'),
-  message: {
-    success: false,
-    message: 'Too many requests from this IP, please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// const limiter = rateLimit({
+//   windowMs: parseInt(envObj.RATE_LIMIT_WINDOW_MS || '900000'),
+//   max: parseInt(envObj.RATE_LIMIT_MAX_REQUESTS || '100'),
+//   message: {
+//     success: false,
+//     message: 'Too many requests from this IP, please try again later.'
+//   },
+//   standardHeaders: true,
+//   legacyHeaders: false,
+// });
 
-app.use('/api/', limiter);
+// app.use('/api/', limiter);
 
 app.use(compression());
 
