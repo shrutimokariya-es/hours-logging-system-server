@@ -2,27 +2,30 @@ import { Router } from 'express';
 import {
   createHourLog,
   getHourLogs,
-  getReports
+  getReports,
+  importHourLog
 } from '../controllers/hourLogController';
 import { authenticate, authorize } from '../middlewares/auth';
 import { validate } from '../middlewares/joiValidation';
 import { 
   createHourLogSchema, 
   getHourLogsSchema, 
-  getReportsSchema 
+  getReportsSchema,
+  importHourLogSchema
 } from '../validators/hourLogValidator';
 
 const router = Router();
 
 router.use(authenticate);
-router.use(authorize([0, 2])); // 0: BA, 2: Developer - both can create hour logs
 
-router.post('/', validate(createHourLogSchema), createHourLog);
+router.post('/', authorize([0, 2]), validate(createHourLogSchema), createHourLog);
 
-router.get('/', validate(getHourLogsSchema, 'query'), getHourLogs);
+router.post('/import', authorize([0]), validate(importHourLogSchema), importHourLog);
 
-router.get('/project/:projectId', validate(getHourLogsSchema, 'query'), getHourLogs);
+router.get('/', authorize([0, 1, 2]), validate(getHourLogsSchema, 'query'), getHourLogs);
 
-router.get('/reports', validate(getReportsSchema, 'query'), getReports);
+router.get('/project/:projectId', authorize([0, 1, 2]), validate(getHourLogsSchema, 'query'), getHourLogs);
+
+router.get('/reports', authorize([0, 1, 2]), validate(getReportsSchema, 'query'), getReports);
 
 export { router as hourLogRoutes };

@@ -76,3 +76,33 @@ export const getReportsSchema = Joi.object({
     'any.only': 'Report type must be clients, developers, current-month, or daily'
   })
 });
+
+export const importHourLogSchema = Joi.object({
+  project: Joi.string().trim().min(1).max(200).required().messages({
+    'string.min': 'Project name is required',
+    'string.max': 'Project name cannot exceed 200 characters',
+    'any.required': 'Project is required'
+  }),
+  clientName: Joi.string().trim().min(1).max(200).required().messages({
+    'string.min': 'Client name is required',
+    'string.max': 'Client name cannot exceed 200 characters',
+    'any.required': 'Client name is required'
+  }),
+  developerName: Joi.string().trim().min(1).max(200).required().messages({
+    'string.min': 'Developer name is required',
+    'string.max': 'Developer name cannot exceed 200 characters',
+    'any.required': 'Developer name is required'
+  }),
+  hours: Joi.number().min(0.5).max(24).required().messages({
+    'number.min': 'Hours must be at least 0.5',
+    'number.max': 'Hours cannot exceed 24',
+    'any.required': 'Hours are required'
+  }),
+  date: Joi.string().isoDate().required().messages({
+    'string.isoDate': 'Valid date is required (YYYY-MM-DD format)',
+    'any.required': 'Date is required'
+  }),
+  description: Joi.string().trim().max(500).optional().allow('').messages({
+    'string.max': 'Description cannot exceed 500 characters'
+  })
+});

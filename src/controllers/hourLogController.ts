@@ -363,3 +363,107 @@ export const getReports = asyncHandler(async (req: AuthRequest, res: Response) =
 
   return sendResponse(res, response);
 });
+
+export const importHourLog = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { project, clientName, developerName, hours, date, description } = req.body;
+  console.log("????", req.body);
+  
+  // Only BA can import hour logs
+  if (req.user.role !== 0) {
+    return sendResponse(res, {
+      success: false,
+      message: 'Only BA can import hour logs',
+      statusCode: 403,
+      toast: true
+    });
+  }
+
+  try {
+    // Find client by name
+    const clientUser = await User.findOne({ name: clientName, role: 1 });
+    if (!clientUser) {
+      return sendResponse(res, {
+        success: false,
+        message: `Client not found: ${clientName}`,
+        statusCode: 400,
+        toast: true
+      });
+    }
+
+    // Find developer by name
+    const developerUser = await User.findOne({ name: developerName, role: 2 });
+    if (!developerUser) {
+      return sendResponse(res, {
+        success: false,
+        message: `Developer not found: ${developerName}`,
+        statusCode: 400,
+        toast: true
+      });
+    }
+
+    // Find or create project using findOneAndUpdate with upsert to avoid race conditions
+    let projectDoc = await Project.findOneAndUpdate(
+      { 
+        name: project, 
+        client: clientUser._id 
+      },
+      {
+        $setOnInsert: {
+          name: project,
+          client: clientUser._id,
+          developers: [developerUser._id],
+          status: 'active',
+          billingType: 'hourly',
+          createdBy: req.user._id,
+          totalHours: 0
+        }
+      },
+      { 
+        upsert: true, 
+        new: true,
+        setDefaultsOnInsert: true
+      }
+    );
+
+    // Add developer to project if not already assigned
+    if (!projectDoc.developers.some((dev: any) => dev.toString() === developerUser._id.toString())) {
+      await Project.findByIdAndUpdate(projectDoc._id, {
+        $addToSet: { developers: developerUser._id }
+      });
+    }
+
+    // Create hour log
+    const hourLog = await HourLog.create({
+      client: clientUser._id,
+      developer: developerUser._id,
+      project: projectDoc._id,
+      date: new Date(date),
+      hours: Number(hours),
+      description: description || '',
+      createdBy: req.user._id
+    });
+
+    // Update project total hours
+    await Project.findByIdAndUpdate(projectDoc._id, {
+      $inc: { totalHours: Number(hours) }
+    });
+
+    await hourLog.populate(['client', 'developer', 'project', 'createdBy']);
+
+    return sendResponse(res, {
+      success: true,
+      message: 'Hour log imported successfully',
+      statusCode: 201,
+      data: { hourLog },
+      toast: false // Don't show toast for each import
+    });
+  } catch (error: any) {
+    console.error('Import error:', error);
+    return sendResponse(res, {
+      success: false,
+      message: error.message || 'Failed to import hour log',
+      statusCode: 500,
+      toast: true
+    });
+  }
+});

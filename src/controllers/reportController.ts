@@ -43,7 +43,7 @@ export const generateReport = async (req: Request, res: Response): Promise<Respo
 export const getClientHours = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { clientId, startDate, endDate } = req.query;
-
+console.log(">>",req.query)
     if (!clientId) {
       return res.status(400).json({
         success: false,
@@ -169,7 +169,7 @@ export const getClientHoursData = async (req: Request, res: Response) => {
     const clientId = req.query.clientId as string;
     
     const clientHours = await reportService.getClientHours(period, clientId);
-
+console.log("!!!!!!",clientId,period)
     res.json({
       success: true,
       message: 'Client hours retrieved successfully',

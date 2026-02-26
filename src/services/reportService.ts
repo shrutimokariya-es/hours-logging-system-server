@@ -648,6 +648,7 @@ export const getHoursSummary = async (period: string = 'monthly', startDate?: st
     const hourLogs = await HourLog.find(query)
       .populate('client', 'name email role')
       .populate('developer', 'name email role')
+      .populate('project', 'name')
       .populate('createdBy', 'name email')
       .lean();
 
@@ -704,6 +705,7 @@ export const getHoursSummary = async (period: string = 'monthly', startDate?: st
       id: log._id.toString(),
       clientName: log.client?.name || 'Unknown Client',
       developerName: log.developer?.name || 'Unknown Developer',
+      project: log.project?.name || 'N/A',
       hours: log.hours,
       date: log.date.toISOString().split('T')[0],
       description: log.description
