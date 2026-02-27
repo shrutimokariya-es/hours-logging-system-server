@@ -32,6 +32,10 @@ export const createHourLogSchema = Joi.object({
   project: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required().messages({
     'string.pattern.base': 'Valid project ID is required',
     'any.required': 'Project is required'
+  }),
+  task: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required().messages({
+    'string.pattern.base': 'Valid project ID is required',
+    'any.required': 'Project is required'
   })
 });
 

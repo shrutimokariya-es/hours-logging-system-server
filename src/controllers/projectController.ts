@@ -12,7 +12,9 @@ export const createProject = asyncHandler(async (req: AuthRequest, res: Response
     return sendResponse(res, {
       success: false,
       message: 'Invalid client selected',
-      statusCode: 400
+      statusCode: 400,
+      toast:true,
+      toastMessageFlag:true
     });
   }
 
@@ -23,7 +25,9 @@ export const createProject = asyncHandler(async (req: AuthRequest, res: Response
       return sendResponse(res, {
         success: false,
         message: 'Invalid developer(s) selected',
-        statusCode: 400
+        statusCode: 400,
+      toast:true,
+      toastMessageFlag:true
       });
     }
   }
@@ -51,7 +55,9 @@ export const createProject = asyncHandler(async (req: AuthRequest, res: Response
     success: true,
     message: 'Project created successfully',
     data: { project: populatedProject },
-    statusCode: 201
+    statusCode: 201,
+      toast:true,
+      toastMessageFlag:true
   });
 });
 
@@ -158,7 +164,8 @@ export const updateProject = asyncHandler(async (req: AuthRequest, res: Response
     return sendResponse(res, {
       success: false,
       message: 'Project not found',
-      statusCode: 404
+      statusCode: 404,
+      toast:true
     });
   }
 
@@ -167,7 +174,8 @@ export const updateProject = asyncHandler(async (req: AuthRequest, res: Response
     return sendResponse(res, {
       success: false,
       message: 'Only BA can update projects',
-      statusCode: 403
+      statusCode: 403,
+      toast:true
     });
   }
 
@@ -178,7 +186,8 @@ export const updateProject = asyncHandler(async (req: AuthRequest, res: Response
       return sendResponse(res, {
         success: false,
         message: 'Invalid client selected',
-        statusCode: 400
+        statusCode: 400,
+      toast:true
       });
     }
   }
@@ -190,7 +199,8 @@ export const updateProject = asyncHandler(async (req: AuthRequest, res: Response
       return sendResponse(res, {
         success: false,
         message: 'Invalid developer(s) selected',
-        statusCode: 400
+        statusCode: 400,
+      toast:true
       });
     }
   }
@@ -218,7 +228,8 @@ export const updateProject = asyncHandler(async (req: AuthRequest, res: Response
   return sendResponse(res, {
     success: true,
     message: 'Project updated successfully',
-    data: { project: updatedProject }
+    data: { project: updatedProject },
+      toast:true
   });
 });
 
@@ -231,7 +242,8 @@ export const deleteProject = asyncHandler(async (req: AuthRequest, res: Response
     return sendResponse(res, {
       success: false,
       message: 'Project not found',
-      statusCode: 404
+      statusCode: 404,
+      toast:true
     });
   }
 
@@ -240,7 +252,8 @@ export const deleteProject = asyncHandler(async (req: AuthRequest, res: Response
     return sendResponse(res, {
       success: false,
       message: 'Only BA can delete projects',
-      statusCode: 403
+      statusCode: 403,
+      toast:true
     });
   }
 
@@ -248,7 +261,8 @@ export const deleteProject = asyncHandler(async (req: AuthRequest, res: Response
 
   return sendResponse(res, {
     success: true,
-    message: 'Project deleted successfully'
+    message: 'Project deleted successfully',
+      toast:true
   });
 });
 

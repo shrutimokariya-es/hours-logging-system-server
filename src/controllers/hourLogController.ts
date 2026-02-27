@@ -1,12 +1,12 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
-import { HourLog, User, Project } from '../models';
+import { HourLog, User, Project, Task } from '../models';
 import { AuthRequest } from '../middlewares/auth';
 import { asyncHandler } from '../middlewares/errorHandler';
 import { sendResponse } from '../utils/response';
 
 export const createHourLog = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { client, developer, project, date, hours, description } = req.body;
+  const { client, developer, project, task, date, hours, description } = req.body;
 console.log("user",req.body)
   // Only developers can create hour logs for themselves
   if (req.user.role === 2) {
@@ -16,6 +16,16 @@ console.log("user",req.body)
         success: false,
         message: 'Developers can only log hours for themselves',
         statusCode: 403,
+        toast: true
+      });
+    }
+    
+    // Developers must provide a task
+    if (!task) {
+      return sendResponse(res, {
+        success: false,
+        message: 'Developers must log hours against a specific task',
+        statusCode: 400,
         toast: true
       });
     }
@@ -72,22 +82,63 @@ console.log("user",req.body)
     });
   }
 
+  // Validate task if provided
+  if (task) {
+    const taskDoc = await Task.findById(task);
+    if (!taskDoc) {
+      return sendResponse(res, {
+        success: false,
+        message: 'Invalid task ID',
+        statusCode: 400,
+        toast: true
+      });
+    }
+
+    // Check if task belongs to the project
+    if (taskDoc.project.toString() !== project) {
+      return sendResponse(res, {
+        success: false,
+        message: 'Task does not belong to the selected project',
+        statusCode: 400,
+        toast: true
+      });
+    }
+
+    // Check if developer is assigned to the task
+    if (!taskDoc.assignedTo.some((dev: any) => dev.toString() === developer)) {
+      return sendResponse(res, {
+        success: false,
+        message: 'Developer is not assigned to this task',
+        statusCode: 400,
+        toast: true
+      });
+    }
+  }
+
   const hourLog = await HourLog.create({
     client,
     developer,
     project,
+    task: task || undefined,
     date,
     hours,
     description,
     createdBy: req.user._id
   });
 
-  // Update project total hours
+  // Update project actual hours
   await Project.findByIdAndUpdate(project, {
-    $inc: { totalHours: hours }
+    $inc: { actualHours: hours }
   });
 
-  await hourLog.populate(['client', 'developer', 'project', 'createdBy']);
+  // Update task actual hours if task is provided
+  if (task) {
+    await Task.findByIdAndUpdate(task, {
+      $inc: { actualHours: hours }
+    });
+  }
+
+  await hourLog.populate(['client', 'developer', 'project', 'task', 'createdBy']);
 
   return sendResponse(res, {
     success: true,
@@ -415,7 +466,7 @@ export const importHourLog = asyncHandler(async (req: AuthRequest, res: Response
           status: 'active',
           billingType: 'hourly',
           createdBy: req.user._id,
-          totalHours: 0
+          actualHours: 0
         }
       },
       { 
@@ -443,9 +494,9 @@ export const importHourLog = asyncHandler(async (req: AuthRequest, res: Response
       createdBy: req.user._id
     });
 
-    // Update project total hours
+    // Update project actual hours
     await Project.findByIdAndUpdate(projectDoc._id, {
-      $inc: { totalHours: Number(hours) }
+      $inc: { actualHours: Number(hours) }
     });
 
     await hourLog.populate(['client', 'developer', 'project', 'createdBy']);

@@ -4,6 +4,7 @@ export interface IHourLog extends Document {
   client: mongoose.Types.ObjectId;
   developer: mongoose.Types.ObjectId;
   project: mongoose.Types.ObjectId;
+  task?: mongoose.Types.ObjectId;
   date: Date;
   hours: number;
   description: string;
@@ -25,6 +26,10 @@ const hourLogSchema = new Schema<IHourLog>({
     type: Schema.Types.ObjectId,
     ref: 'Project',
     required: [true, 'Project is required']
+  },
+  task: {
+    type: Schema.Types.ObjectId,
+    ref: 'Task'
   },
   date: {
     type: Date,
@@ -65,6 +70,8 @@ const hourLogSchema = new Schema<IHourLog>({
 
 hourLogSchema.index({ client: 1, date: -1 });
 hourLogSchema.index({ developer: 1, date: -1 });
+hourLogSchema.index({ project: 1, date: -1 });
+hourLogSchema.index({ task: 1, date: -1 });
 hourLogSchema.index({ date: -1 });
 hourLogSchema.index({ createdBy: 1 });
 

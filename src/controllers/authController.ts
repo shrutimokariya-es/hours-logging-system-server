@@ -23,7 +23,6 @@ export const login = asyncHandler(async (req: AuthRequest, res: Response) => {
   // 2. Check for user and include password for comparison
   // We use .select('+password') because it is likely hidden by default in the schema
   const user = await User.findOne({ email }).select('+password');
-console.log("user",user)
   
   // 3. Validate user existence and password match
   // The comparePassword method should be defined in your User schema
@@ -73,8 +72,11 @@ export const register = asyncHandler(async (req: AuthRequest, res: Response) => 
     return sendResponse(res, {
       success: false,
       message: 'Registration is closed. Please contact your administrator.',
-      statusCode: 403
-    });
+      statusCode: 403,
+      toast:true,
+      toastMessageFlag:
+        true
+       });
   }
 
   const existingUser = await User.findOne({ email });
@@ -82,7 +84,9 @@ export const register = asyncHandler(async (req: AuthRequest, res: Response) => 
     return sendResponse(res, {
       success: false,
       message: 'User with this email already exists',
-      statusCode: 400
+      statusCode: 400,
+      toast:true,
+      toastMessageFlag:true
     });
   }
 
@@ -112,7 +116,8 @@ export const register = asyncHandler(async (req: AuthRequest, res: Response) => 
         email: user.email,
         role: user.role
       }
-    }
+    },
+    toast:true
   });
 });
 

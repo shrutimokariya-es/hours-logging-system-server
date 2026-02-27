@@ -16,6 +16,7 @@ import { hourLogRoutes } from './routes/hourLogs';
 import { dashboardRoutes } from './routes/dashboard';
 import { reportRoutes } from './routes/reports';
 import { projectRoutes } from './routes/projects';
+import taskRoutes from './routes/taskRoutes';
 import { envObj } from './config/envConfig';
 
 const app = express();
@@ -62,6 +63,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/developers', developerRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/tasks', taskRoutes);
 app.use('/api/hour-logs', hourLogRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);

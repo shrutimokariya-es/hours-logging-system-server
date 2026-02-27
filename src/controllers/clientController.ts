@@ -13,7 +13,9 @@ console.log("req.user",req.body)
     return sendResponse(res, {
       success: false,
       message: 'Only BA can create clients',
-      statusCode: 403
+      statusCode: 403,
+      toast:true,
+      toastMessageFlag:true
     });
   }
 
@@ -23,7 +25,9 @@ console.log("req.user",req.body)
     return sendResponse(res, {
       success: false,
       message: 'User with this email already exists',
-      statusCode: 400
+      statusCode: 400,
+      toast:true,
+      toastMessageFlag:true
     });
   }
 
@@ -41,7 +45,9 @@ console.log("req.user",req.body)
     success: true,
     message: 'Client created successfully',
     statusCode: 201,
-    data: { client }
+    data: { client },
+      toast:true,
+      toastMessageFlag:true
   });
 });
 

@@ -165,11 +165,13 @@ export const getReportStats = async (req: Request, res: Response) => {
 // Get client hours data
 export const getClientHoursData = async (req: Request, res: Response) => {
   try {
-    const period = req.query.period as string || 'monthly';
+    const period = req.query.period as string || 'all';
     const clientId = req.query.clientId as string;
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
     
-    const clientHours = await reportService.getClientHours(period, clientId);
-console.log("!!!!!!",clientId,period)
+    const clientHours = await reportService.getClientHours(period, clientId, startDate, endDate);
+console.log("!!!!!!",clientId,period, startDate, endDate)
     res.json({
       success: true,
       message: 'Client hours retrieved successfully',

@@ -299,70 +299,83 @@ export const getReportStats = async () => {
 };
 
 // Get client hours data
-export const getClientHours = async (period: string = 'monthly', clientId?: string) => {
+export const getClientHours = async (period: string = 'all', clientId?: string, startDate?: string, endDate?: string) => {
   try {
     const now = new Date();
     let dateFilter: any = {};
     
-    // Calculate date range based on period
-    switch (period) {
-      case 'weekly':
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - now.getDay());
-        weekStart.setHours(0, 0, 0, 0);
-        const weekEnd = new Date(now);
-        weekEnd.setHours(23, 59, 59, 999);
-        dateFilter = {
-          $gte: weekStart,
-          $lte: weekEnd
-        };
-        break;
-      case 'this-month':
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        dateFilter = {
-          $gte: monthStart,
-          $lte: monthEnd
-        };
-        break;
-      case 'last-month':
-        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-        dateFilter = {
-          $gte: lastMonthStart,
-          $lte: lastMonthEnd
-        };
-        break;
-      case 'this-quarter':
-        const quarter = Math.floor(now.getMonth() / 3);
-        const quarterStart = new Date(now.getFullYear(), quarter * 3, 1);
-        const quarterEnd = new Date(now.getFullYear(), (quarter + 1) * 3, 0);
-        dateFilter = {
-          $gte: quarterStart,
-          $lte: quarterEnd
-        };
-        break;
-      case 'this-year':
-        const yearStart = new Date(now.getFullYear(), 0, 1);
-        const yearEnd = new Date(now.getFullYear(), 11, 31);
-        dateFilter = {
-          $gte: yearStart,
-          $lte: yearEnd
-        };
-        break;
-      default:
-        // Default to this month
-        const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const defaultEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        dateFilter = {
-          $gte: defaultStart,
-          $lte: defaultEnd
-        };
+    // If custom dates are provided, use them
+    if (startDate && endDate) {
+      dateFilter = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    } else if (period && period !== 'all') {
+      // Calculate date range based on period - only apply if period is specified and not 'all'
+      switch (period) {
+        case 'weekly':
+          const weekStart = new Date(now);
+          weekStart.setDate(now.getDate() - now.getDay());
+          weekStart.setHours(0, 0, 0, 0);
+          const weekEnd = new Date(now);
+          weekEnd.setHours(23, 59, 59, 999);
+          dateFilter = {
+            $gte: weekStart,
+            $lte: weekEnd
+          };
+          break;
+        case 'this-month':
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          dateFilter = {
+            $gte: monthStart,
+            $lte: monthEnd
+          };
+          break;
+        case 'last-month':
+          const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+          dateFilter = {
+            $gte: lastMonthStart,
+            $lte: lastMonthEnd
+          };
+          break;
+        case 'this-quarter':
+          const quarter = Math.floor(now.getMonth() / 3);
+          const quarterStart = new Date(now.getFullYear(), quarter * 3, 1);
+          const quarterEnd = new Date(now.getFullYear(), (quarter + 1) * 3, 0);
+          dateFilter = {
+            $gte: quarterStart,
+            $lte: quarterEnd
+          };
+          break;
+        case 'this-year':
+          const yearStart = new Date(now.getFullYear(), 0, 1);
+          const yearEnd = new Date(now.getFullYear(), 11, 31);
+          dateFilter = {
+            $gte: yearStart,
+            $lte: yearEnd
+          };
+          break;
+        case 'monthly':
+        default:
+          // Default to this month only if explicitly requested
+          const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          const defaultEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          dateFilter = {
+            $gte: defaultStart,
+            $lte: defaultEnd
+          };
+      }
     }
     
-    const query: any = {
-      date: dateFilter
-    };
+    const query: any = {};
+    
+    // Only apply date filter if it was set
+    if (Object.keys(dateFilter).length > 0) {
+      query.date = dateFilter;
+    }
+    
     let projectList: any = [];
     if (clientId) {
       query.client = new Types.ObjectId(clientId);

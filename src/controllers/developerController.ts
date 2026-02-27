@@ -14,7 +14,9 @@ export const createDeveloper = asyncHandler(async (req: AuthRequest, res: Respon
     return sendResponse(res, {
       success: false,
       message: 'Only BA can create developers',
-      statusCode: 403
+      statusCode: 403,
+      toast:true,
+      toastMessageFlag:true
     });
   }
 
@@ -24,7 +26,9 @@ export const createDeveloper = asyncHandler(async (req: AuthRequest, res: Respon
     return sendResponse(res, {
       success: false,
       message: 'User with this email already exists',
-      statusCode: 400
+      statusCode: 400,
+      toast:true,
+      toastMessageFlag:true
     });
   }
 
@@ -43,7 +47,9 @@ export const createDeveloper = asyncHandler(async (req: AuthRequest, res: Respon
     success: true,
     message: 'Developer created successfully',
     statusCode: 201,
-    data: { developer }
+    data: { developer },
+      toast:true,
+      toastMessageFlag:true
   });
 });
 
