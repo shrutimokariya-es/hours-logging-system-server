@@ -66,31 +66,19 @@ const token = jwt.sign(
 export const register = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { name, email, password } = req.body;
 
-  // Check if any users already exist
-  const existingUsers = await User.countDocuments();
-  if (existingUsers > 0) {
-    return sendResponse(res, {
-      success: false,
-      message: 'Registration is closed. Please contact your administrator.',
-      statusCode: 403,
-      toast:true,
-      toastMessageFlag:
-        true
-       });
-  }
-
+  // Check if user with this email already exists
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     return sendResponse(res, {
       success: false,
       message: 'User with this email already exists',
       statusCode: 400,
-      toast:true,
-      toastMessageFlag:true
+      toast: true,
+      toastMessageFlag: true
     });
   }
 
-  // Create the first user as BA (Business Analyst) admin
+  // Create user as BA (Business Analyst) admin
   const user = await User.create({
     name,
     email,
@@ -117,7 +105,8 @@ export const register = asyncHandler(async (req: AuthRequest, res: Response) => 
         role: user.role
       }
     },
-    toast:true
+    toast: true,
+    toastMessageFlag: true
   });
 });
 
