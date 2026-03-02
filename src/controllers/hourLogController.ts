@@ -150,7 +150,8 @@ console.log("user",req.body)
 });
 
 export const getHourLogs = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { page = 1, limit = 10, clientId, developerId, startDate, endDate } = req.query;
+  console.log("req.query?????????",req.query)
+  const { page = 1, limit = 10, clientId, developerId, startDate, endDate, search, date, project } = req.query;
   const { projectId } = req.params;
   
   const query: any = {};
@@ -168,19 +169,51 @@ export const getHourLogs = asyncHandler(async (req: AuthRequest, res: Response) 
   if (developerId) query.developer = developerId;
   if (projectId) query.project = projectId;
   
+  // Date range filter
   if (startDate || endDate) {
     query.date = {};
     if (startDate) query.date.$gte = new Date(startDate as string);
     if (endDate) query.date.$lte = new Date(endDate as string);
   }
+  
+  // Specific date filter
+  if (date) {
+    const filterDate = new Date(date as string);
+    const nextDay = new Date(filterDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    query.date = { $gte: filterDate, $lt: nextDay };
+  }
+  
+  // Search in description
+  if (search) {
+    console.log("??>>",search)
+    query.description = { $regex: search, $options: 'i' };
+  }
 
-  const hourLogs = await HourLog.find(query)
-    .populate(['client', 'developer', 'project', 'createdBy'])
-    .sort({ date: -1 })
+  // Build the base query
+  let hourLogsQuery = HourLog.find(query)
+    .populate(['client', 'developer', 'project', 'task', 'createdBy'])
+    .sort({ date: -1 });
+
+  // If project name filter is provided, we need to filter after population
+  let hourLogs = await hourLogsQuery
     .limit(Number(limit) * Number(page))
     .skip((Number(page) - 1) * Number(limit));
 
-  const total = await HourLog.countDocuments(query);
+  // Filter by project name if provided
+  if (project) {
+    hourLogs = hourLogs.filter((log: any) => 
+      log.project?.name?.toLowerCase().includes((project as string).toLowerCase())
+    );
+  }
+
+  // Get total count
+  let total = await HourLog.countDocuments(query);
+  
+  // Adjust total if project filter is applied (approximate)
+  if (project) {
+    total = hourLogs.length;
+  }
 
   return sendResponse(res, {
     success: true,

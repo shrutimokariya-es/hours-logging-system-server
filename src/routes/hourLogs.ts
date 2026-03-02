@@ -22,7 +22,7 @@ router.post('/', authorize([0, 2]), validate(createHourLogSchema), createHourLog
 
 router.post('/import', authorize([0]), validate(importHourLogSchema), importHourLog);
 
-router.get('/', authorize([0, 1, 2]), validate(getHourLogsSchema, 'query'), getHourLogs);
+router.get('/', authorize([0, 1, 2]), validate(getHourLogsSchema), getHourLogs);
 
 router.get('/project/:projectId', authorize([0, 1, 2]), validate(getHourLogsSchema, 'query'), getHourLogs);
 
