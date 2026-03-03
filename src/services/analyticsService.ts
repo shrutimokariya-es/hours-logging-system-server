@@ -23,40 +23,40 @@ export interface DeveloperWorkloadAnalytics {
   utilizationPercentage: number;
 }
 
-export interface TaskCompletionAnalytics {
-  averageCompletionTime: number; // in days
-  totalTasks: number;
-  completedTasks: number;
-  completionRate: number;
-  averageEstimatedVsActual: number; // ratio
-  tasksByStatus: {
-    status: string;
-    count: number;
-    percentage: number;
-  }[];
-}
+// export interface TaskCompletionAnalytics {
+//   averageCompletionTime: number; // in days
+//   totalTasks: number;
+//   completedTasks: number;
+//   completionRate: number;
+//   averageEstimatedVsActual: number; // ratio
+//   tasksByStatus: {
+//     status: string;
+//     count: number;
+//     percentage: number;
+//   }[];
+// }
 
-export interface DeadlineAnalytics {
-  totalTasksWithDeadlines: number;
-  missedDeadlines: number;
-  upcomingDeadlines: number;
-  onTimeCompletions: number;
-  missedDeadlineRatio: number;
-  criticalUpcoming: {
-    taskId: string;
-    taskTitle: string;
-    projectName: string;
-    dueDate: Date;
-    daysRemaining: number;
-    assignedTo: string[];
-  }[];
-}
+// export interface DeadlineAnalytics {
+//   totalTasksWithDeadlines: number;
+//   missedDeadlines: number;
+//   upcomingDeadlines: number;
+//   onTimeCompletions: number;
+//   missedDeadlineRatio: number;
+//   criticalUpcoming: {
+//     taskId: string;
+//     taskTitle: string;
+//     projectName: string;
+//     dueDate: Date;
+//     daysRemaining: number;
+//     assignedTo: string[];
+//   }[];
+// }
 
 export interface PredictiveInsights {
   clientHoursAnalytics: ClientHoursAnalytics[];
   developerWorkloadAnalytics: DeveloperWorkloadAnalytics[];
-  taskCompletionAnalytics: TaskCompletionAnalytics;
-  deadlineAnalytics: DeadlineAnalytics;
+  // taskCompletionAnalytics: TaskCompletionAnalytics;
+  // deadlineAnalytics: DeadlineAnalytics;
   trends: {
     hoursThisMonth: number;
     hoursLastMonth: number;
@@ -74,10 +74,10 @@ const getClientHoursAnalytics = async (
   const matchQuery: any = {
     date: { $gte: startDate, $lte: endDate }
   };
-
   if (userRole === 2) {
     matchQuery.developer = new Types.ObjectId(userId);
   }
+
 
   const result = await HourLog.aggregate([
     { $match: matchQuery },
@@ -195,132 +195,6 @@ const getDeveloperWorkloadAnalytics = async (
     };
   });
 };
-
-const getTaskCompletionAnalytics = async (
-  userRole: number,
-  userId: string
-): Promise<TaskCompletionAnalytics> => {
-  const matchQuery: any = {};
-
-  if (userRole === 2) {
-    matchQuery.assignedTo = new Types.ObjectId(userId);
-  }
-
-  const tasks = await Task.find(matchQuery).lean();
-  const completedTasks = tasks.filter(t => t.status === 'Completed');
-
-  // Calculate average completion time
-  let totalCompletionDays = 0;
-  let tasksWithDates = 0;
-  let totalEstimatedVsActual = 0;
-  let tasksWithEstimates = 0;
-
-  completedTasks.forEach(task => {
-    if (task.startDate && task.updatedAt) {
-      const completionTime = (new Date(task.updatedAt).getTime() - new Date(task.startDate).getTime()) / (1000 * 60 * 60 * 24);
-      totalCompletionDays += completionTime;
-      tasksWithDates++;
-    }
-
-    if (task.estimatedHours && task.actualHours) {
-      totalEstimatedVsActual += task.actualHours / task.estimatedHours;
-      tasksWithEstimates++;
-    }
-  });
-
-  const averageCompletionTime = tasksWithDates > 0 ? totalCompletionDays / tasksWithDates : 0;
-  const averageEstimatedVsActual = tasksWithEstimates > 0 ? totalEstimatedVsActual / tasksWithEstimates : 1;
-
-  // Group by status
-  const statusCounts = tasks.reduce((acc, task) => {
-    acc[task.status] = (acc[task.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const tasksByStatus = Object.entries(statusCounts).map(([status, count]) => ({
-    status,
-    count,
-    percentage: (count / tasks.length) * 100
-  }));
-
-  return {
-    averageCompletionTime: parseFloat(averageCompletionTime.toFixed(2)),
-    totalTasks: tasks.length,
-    completedTasks: completedTasks.length,
-    completionRate: tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0,
-    averageEstimatedVsActual: parseFloat(averageEstimatedVsActual.toFixed(2)),
-    tasksByStatus
-  };
-};
-
-const getDeadlineAnalytics = async (
-  userRole: number,
-  userId: string
-): Promise<DeadlineAnalytics> => {
-  const matchQuery: any = {
-    dueDate: { $exists: true, $ne: null }
-  };
-
-  if (userRole === 2) {
-    matchQuery.assignedTo = new Types.ObjectId(userId);
-  }
-
-  const tasks = await Task.find(matchQuery)
-    .populate('project', 'name')
-    .populate('assignedTo', 'name')
-    .lean();
-
-  const now = new Date();
-  let missedDeadlines = 0;
-  let upcomingDeadlines = 0;
-  let onTimeCompletions = 0;
-  const criticalUpcoming: DeadlineAnalytics['criticalUpcoming'] = [];
-
-  tasks.forEach(task => {
-    const dueDate = new Date(task.dueDate!);
-    const daysRemaining = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (task.status === 'Completed') {
-      // Check if completed on time
-      if (task.updatedAt && new Date(task.updatedAt) <= dueDate) {
-        onTimeCompletions++;
-      } else {
-        missedDeadlines++;
-      }
-    } else {
-      // Task not completed
-      if (dueDate < now) {
-        missedDeadlines++;
-      } else {
-        upcomingDeadlines++;
-        
-        // Critical if due within 3 days
-        if (daysRemaining <= 3) {
-          criticalUpcoming.push({
-            taskId: task._id.toString(),
-            taskTitle: task.title,
-            projectName: (task.project as any)?.name || 'Unknown',
-            dueDate: task.dueDate!,
-            daysRemaining,
-            assignedTo: (task.assignedTo as any[]).map((dev: any) => dev.name)
-          });
-        }
-      }
-    }
-  });
-
-  const missedDeadlineRatio = tasks.length > 0 ? (missedDeadlines / tasks.length) * 100 : 0;
-
-  return {
-    totalTasksWithDeadlines: tasks.length,
-    missedDeadlines,
-    upcomingDeadlines,
-    onTimeCompletions,
-    missedDeadlineRatio: parseFloat(missedDeadlineRatio.toFixed(2)),
-    criticalUpcoming: criticalUpcoming.sort((a, b) => a.daysRemaining - b.daysRemaining)
-  };
-};
-
 const getTrends = async (
   userRole: number,
   userId: string
@@ -378,22 +252,22 @@ const getPredictiveInsights = async (
   const [
     clientHoursAnalytics,
     developerWorkloadAnalytics,
-    taskCompletionAnalytics,
-    deadlineAnalytics,
+    // taskCompletionAnalytics,
+    // deadlineAnalytics,
     trends
   ] = await Promise.all([
     getClientHoursAnalytics(startDate, endDate, userRole, userId),
     getDeveloperWorkloadAnalytics(startDate, endDate, userRole, userId),
-    getTaskCompletionAnalytics(userRole, userId),
-    getDeadlineAnalytics(userRole, userId),
+    // getTaskCompletionAnalytics(userRole, userId),
+    // getDeadlineAnalytics(userRole, userId),
     getTrends(userRole, userId)
   ]);
 
   return {
     clientHoursAnalytics,
     developerWorkloadAnalytics,
-    taskCompletionAnalytics,
-    deadlineAnalytics,
+    // taskCompletionAnalytics,
+    // deadlineAnalytics,
     trends
   };
 };
